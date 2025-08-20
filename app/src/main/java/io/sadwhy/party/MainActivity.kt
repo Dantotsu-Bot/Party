@@ -1,133 +1,57 @@
 package io.sadwhy.party
 
-import android.graphics.Color.TRANSPARENT
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.DrawableRes
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.fragment.app.FragmentContainerView
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.*
-import io.sadwhy.party.R
-import io.sadwhy.party.ui.main.home.HomeScreen
-import io.sadwhy.party.ui.main.library.LibraryScreen
-import io.sadwhy.party.ui.main.search.SearchScreen
-import io.sadwhy.party.ui.theme.AppTheme
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.remember
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import io.sadwhy.party.core.debug.console.FloatingConsole
+import io.sadwhy.party.core.theme.AppTheme
+import io.sadwhy.party.core.navigation.Navigator
 
-data class BottomNavItem(
-    val route: String,
-    val label: String,
-    @DrawableRes val iconSelected: Int,
-    @DrawableRes val iconUnselected: Int
-)
+class MainActivity : ComponentActivity() {
 
-class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge(
-            SystemBarStyle.auto(TRANSPARENT, TRANSPARENT),
-            SystemBarStyle.dark(TRANSPARENT)
+            SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            SystemBarStyle.dark(Color.TRANSPARENT)
         )
 
         setContent {
             AppTheme {
-                MainScreen()
+                val navController = rememberNavController()
+                NavControllerHolder.setNavController(navController)
+
+                // create a global Navigator if you want (optional)
+                remember(navController) { Navigator(navController) }
+
+                FloatingConsole {
+                    MainScreen()
+                }
             }
         }
     }
 }
 
-@Composable
-fun MainScreen() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+/**
+ * Small holder so NavHostController can be accessed anywhere without threading it through parameters.
+ * Make sure setNavController(...) is called *before* any call to getNavController().
+ */
+object NavControllerHolder {
+    private var navController: NavHostController? = null
 
-    val bottomNavItems = listOf(
-        BottomNavItem(
-            route = "home",
-            label = "Home",
-            iconSelected = R.drawable.ic_home_filled,
-            iconUnselected = R.drawable.ic_home_outline
-        ),
-        BottomNavItem(
-            route = "search",
-            label = "Search",
-            iconSelected = R.drawable.ic_search_filled,
-            iconUnselected = R.drawable.ic_search_outline
-        ),
-        BottomNavItem(
-            route = "library",
-            label = "Library",
-            iconSelected = R.drawable.ic_bookmark_filled,
-            iconUnselected = R.drawable.ic_bookmark_outline
-        )
-    )
+    fun setNavController(controller: NavHostController) {
+        navController = controller
+    }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Scaffold(
-            bottomBar = {
-                NavigationBar {
-                    bottomNavItems.forEach { item ->
-                        val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-
-                        NavigationBarItem(
-                            icon = {
-                                Crossfade(targetState = isSelected) { selected ->
-                                    Icon(
-                                        painter = painterResource(
-                                            id = if (selected) item.iconSelected else item.iconUnselected
-                                        ),
-                                        contentDescription = item.label
-                                    )
-                                }
-                            },
-                            label = { Text(item.label) },
-                            selected = isSelected,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                composable("home") {
-                    HomeScreen()
-                }
-                composable("search") {
-                    SearchScreen("Search", "Compose Search Screen")
-                }
-                composable("library") {
-                    LibraryScreen()
-                }
-            }
-        }
+    fun getNavController(): NavHostController {
+        return navController
+            ?: throw IllegalStateException("NavController not set")
     }
 }
