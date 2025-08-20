@@ -76,6 +76,9 @@ composeCompiler {
 dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.16.0")
+    
+    // Material 
+    implementation("com.google.android.material:material:1.14.0-alpha03")
 
     // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))
